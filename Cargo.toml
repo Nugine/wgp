@@ -1,0 +1,15 @@
+[package]
+name = "wgp"
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+description = "Yet another waitgroup implementation"
+repository = "https://github.com/Nugine/wgp"
+readme = "README.md"
+documentation = "https://docs.rs/wgp"
+categories = ["asynchronous", "concurrency"]
+keywords = ["waitgroup", "notify", "wake", "futures", "async"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
