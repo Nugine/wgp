@@ -2,7 +2,7 @@ use crate::waker::AtomicWaker;
 
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::task::Waker;
+use std::task::{Context, Poll, Waker};
 
 #[repr(C)]
 struct Inner {
@@ -35,6 +35,17 @@ impl InnerPtr {
 
     pub fn register_waker(&self, waker: &Waker) {
         self.deref().waker.register(waker);
+    }
+
+    pub fn poll_wait(&self, cx: &mut Context<'_>) -> Poll<()> {
+        if self.count() == 0 {
+            return Poll::Ready(());
+        }
+        self.register_waker(cx.waker());
+        if self.count() == 0 {
+            return Poll::Ready(());
+        }
+        Poll::Pending
     }
 }
 

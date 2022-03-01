@@ -1,4 +1,9 @@
-#![deny(clippy::all, clippy::cargo, clippy::missing_inline_in_public_items)]
+#![deny(
+    clippy::all,
+    clippy::cargo,
+    clippy::missing_inline_in_public_items,
+    clippy::must_use_candidate
+)]
 
 mod waker {
     #[cfg(feature = "futures-util")]
@@ -23,32 +28,48 @@ pub struct WaitGroup(InnerPtr);
 #[derive(Clone)]
 pub struct Working(InnerPtr);
 
+impl Working {
+    #[inline]
+    #[must_use]
+    pub fn count(&self) -> usize {
+        self.0.count()
+    }
+}
+
 impl WaitGroup {
     #[inline]
+    #[must_use]
     pub fn new() -> Self {
         Self(InnerPtr::new())
     }
 
     #[inline]
+    #[must_use]
     pub fn working(&self) -> Working {
         Working(self.0.clone())
     }
 
     #[inline]
+    #[must_use]
     pub fn count(&self) -> usize {
         self.0.count()
     }
 
     #[inline]
     pub fn poll_wait(&self, cx: &mut Context<'_>) -> Poll<()> {
-        if self.0.count() == 0 {
-            return Poll::Ready(());
-        }
-        self.0.register_waker(cx.waker());
-        if self.0.count() == 0 {
-            return Poll::Ready(());
-        }
-        Poll::Pending
+        self.0.poll_wait(cx)
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn wait(&self) -> WaitFuture<'_> {
+        WaitFuture(self)
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn wait_owned(self) -> WaitOwnedFuture {
+        WaitOwnedFuture(self)
     }
 }
 
@@ -59,28 +80,39 @@ impl Default for WaitGroup {
     }
 }
 
-impl Future for WaitGroup {
+pub struct WaitOwnedFuture(WaitGroup);
+
+impl Future for WaitOwnedFuture {
     type Output = ();
 
     #[inline]
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        self.poll_wait(cx)
+        self.0.poll_wait(cx)
     }
 }
 
-impl Future for &'_ WaitGroup {
+impl AsRef<WaitGroup> for WaitOwnedFuture {
+    #[inline]
+    fn as_ref(&self) -> &WaitGroup {
+        &self.0
+    }
+}
+
+pub struct WaitFuture<'a>(&'a WaitGroup);
+
+impl Future for WaitFuture<'_> {
     type Output = ();
 
     #[inline]
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        self.poll_wait(cx)
+        self.0.poll_wait(cx)
     }
 }
 
-impl Working {
+impl AsRef<WaitGroup> for WaitFuture<'_> {
     #[inline]
-    pub fn count(&self) -> usize {
-        self.0.count()
+    fn as_ref(&self) -> &WaitGroup {
+        self.0
     }
 }
 
@@ -114,7 +146,7 @@ mod tests {
             });
         }
         assert_eq!(wg.count(), n);
-        (&wg).await;
+        wg.wait().await;
 
         assert_eq!(wg.count(), 0);
         for _ in 0..n {
@@ -125,6 +157,6 @@ mod tests {
             });
         }
         assert_eq!(wg.count(), n);
-        wg.await;
+        wg.wait_owned().await;
     }
 }
