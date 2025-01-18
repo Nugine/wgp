@@ -21,7 +21,7 @@ jobs:
       - uses: taiki-e/install-action@just
       - uses: dtolnay/rust-toolchain@nightly
         with:
-          components: rustfmt, clippy, miri
+          components: rustfmt, clippy, miri, rust-src
       - uses: Swatinem/rust-cache@v2
       - run: just ci
 
@@ -31,7 +31,7 @@ jobs:
       fail-fast: false
       matrix:
         toolchain: 
-          - 1.63.0 # MSRV
+          - 1.78.0 # MSRV
           - stable
     steps:
       - uses: actions/checkout@v4
