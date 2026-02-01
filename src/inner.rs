@@ -78,11 +78,10 @@ impl Drop for InnerPtr {
             }
         }
 
-        let old_refcount = self.deref().refcount.fetch_sub(1, Ordering::Release);
+        let old_refcount = self.deref().refcount.fetch_sub(1, Ordering::AcqRel);
         if old_refcount > 2 {
             return;
         }
-        self.deref().refcount.load(Ordering::Acquire);
         unsafe { drop_slow(self.0.as_ptr(), old_refcount) }
     }
 }
